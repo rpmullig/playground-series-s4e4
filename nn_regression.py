@@ -34,7 +34,7 @@ def main(train_model=False):
     train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
 
-    batch_size = 3
+    batch_size = 2
     num_workers = 4
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
@@ -82,6 +82,9 @@ def main(train_model=False):
     # torch version
     def rmsle(y_true, y_pred):
         # Ensure the predictions are positive since log1p requires positive numbers
+        # y_pred = torch.round(y_pred)
+        # y_pred = torch.clamp(y_pred, min=0)
+
         log_true = torch.log1p(y_true)
         log_pred = torch.log1p(y_pred)
         log_diff = log_pred - log_true
@@ -111,9 +114,6 @@ def main(train_model=False):
                 opt.zero_grad()
 
                 y_pred = model(X_batch)
-                # y_pred = torch.round(y_pred)
-                # y_pred = torch.clamp(y_pred, min=0)
-
                 loss = rmsle(y_test, y_pred)
 
                 loss.backward()
@@ -129,8 +129,6 @@ def main(train_model=False):
                     X_val, y_val = X_val.to(device), y_val.to(device).unsqueeze(1)
 
                     y_val_pred = model(X_val)
-                    # y_val_pred = torch.round(y_pred)
-                    # y_val_pred = torch.clamp(y_pred, min=0)
 
                     val_loss = rmsle(y_val, y_val_pred)
                     val_losses.append(val_loss.item())
