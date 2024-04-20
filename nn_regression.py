@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import torch 
+import torch
 from torch.utils.data import TensorDataset, DataLoader, random_split
 from torch import nn
 import torch.nn.functional as F
@@ -20,7 +19,7 @@ def main(train_model=False):
 
     y_torch = torch.tensor(df['Rings'].values, dtype=torch.int32)
     df.drop(['Rings'], axis=1, inplace=True)
-    X_torch = torch.tensor(df.values, dtype=torch.float32).unsqueeze(1)
+    X_torch = torch.tensor(df.values.astype(np.float32)).unsqueeze(1)
 
     dataset = TensorDataset(X_torch, y_torch)
 
@@ -29,14 +28,14 @@ def main(train_model=False):
     #   Train split
     ############################################################
 
-    train_size = int(0.95 * len(dataset))
+    train_size = int(0.90 * len(dataset))
     test_size = len(dataset) - train_size
 
     train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
 
-    batch_size = 32
-    num_workers = 8
+    batch_size = 3
+    num_workers = 4
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
@@ -59,7 +58,7 @@ def main(train_model=False):
 
         def forward(self, x):
             x = F.relu( self.fc1(x))
-            x = self.dropout1(x) 
+            x = self.dropout1(x)
             x = F.relu( self.fc2(x))
             x = F.relu( self.fc3(x))
             x = self.fc4(x)
@@ -73,7 +72,7 @@ def main(train_model=False):
 
 
     ############################################################
-    #   Loss Function:  Root Mean Squared Logrithmic Error 
+    #   Loss Function:  Root Mean Squared Logrithmic Error
     ############################################################
     ''' numpy version
     def rmsle(y_true, y_pred):
@@ -89,18 +88,18 @@ def main(train_model=False):
         return torch.sqrt(torch.mean(log_diff ** 2))
 
     ############################################################
-    #   Model Training  
+    #   Model Training
     ############################################################
 
     epochs = 40
-    lr = 0.001
+    lr = 0.01
 
     opt = torch.optim.Adam(model.parameters(), lr)
 
     val_loss_min = np.inf
     stop_cnt = 0
     stop_criteria = 8
-    
+
     if train_model:
         for ep in range(epochs):
 
@@ -110,13 +109,13 @@ def main(train_model=False):
                 X_batch, y_test = X_test.to(device), y_test.to(device).unsqueeze(1)
 
                 opt.zero_grad()
-                
+
                 y_pred = model(X_batch)
                 # y_pred = torch.round(y_pred)
                 # y_pred = torch.clamp(y_pred, min=0)
 
                 loss = rmsle(y_test, y_pred)
-                
+
                 loss.backward()
                 opt.step()
 
@@ -127,8 +126,8 @@ def main(train_model=False):
                 model.eval()
                 val_losses = []
                 for X_val, y_val in test_loader:
-                    X_val, y_val = X_val.to(device), y_val.to(device).unsqueeze(1) 
-                    
+                    X_val, y_val = X_val.to(device), y_val.to(device).unsqueeze(1)
+
                     y_val_pred = model(X_val)
                     # y_val_pred = torch.round(y_pred)
                     # y_val_pred = torch.clamp(y_pred, min=0)
@@ -165,20 +164,20 @@ def main(train_model=False):
     df = pd.concat([df, sex_dummies], axis=1)
     df.drop(['Sex'], axis=1, inplace=True)
 
-    X_test = torch.tensor(df.values, dtype=torch.float32).unsqueeze(1)
+    X_test = torch.tensor(df.values.astype(np.float32)).unsqueeze(1)
 
     test_dataset = TensorDataset(X_test)
     test_data_loader = DataLoader(test_dataset, shuffle=False)
-    
+
     ############################################################
     #    Produce Test Output from Model
     ############################################################
-    
+
     test_model = Regressor().to(device)
     test_model.load_state_dict(torch.load('./state_dict.pth'))
 
     test_model.eval()
-    
+
 
     predictions = list()
     for X_batch, in test_data_loader:
